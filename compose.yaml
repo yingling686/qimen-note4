@@ -1,0 +1,18 @@
+services:
+  qimen-note4:
+    build: .
+    image: qimen-note4:1.0.0
+    container_name: qimen-note4
+    network_mode: host
+    restart: unless-stopped
+    init: true
+    env_file: .env
+    volumes:
+      - ./data:/data
+      - ./node:/app/node:ro
+    stop_grace_period: 220s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

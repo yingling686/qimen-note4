@@ -1,0 +1,11 @@
+.git
+.env
+node_modules
+target
+data
+outputs
+.backups
+*.log
+tests
+vendor/zectrix-local-push-sdk/.git
+vendor/zectrix-local-push-sdk/target
