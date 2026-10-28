@@ -1,0 +1,26 @@
+# Stop the qimen-note4 main service before starting this single-use check.
+services:
+  qimen-note4-audio-check:
+    image: qimen-note4:1.0.0
+    container_name: qimen-note4-audio-check
+    network_mode: host
+    restart: "no"
+    init: true
+    entrypoint: ["node"]
+    command: ["tools/audio-check.mjs"]
+    environment:
+      NOTE4_TARGET: 192.168.110.149
+      NOTE4_EXPECTED_ID: 44b176db0014
+      NOTE4_DIAGNOSTICS: "1"
+    volumes:
+      - ../tools:/app/tools:ro
+      - ../outputs:/app/outputs
+  qimen-note4-api-check:
+    image: qimen-note4:1.0.0
+    container_name: qimen-note4-api-check
+    network_mode: host
+    restart: "no"
+    init: true
+    entrypoint: ["node"]
+    command: ["node/check-api.mjs"]
+    env_file: ../.env
