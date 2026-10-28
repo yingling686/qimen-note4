@@ -25,7 +25,7 @@ NAS 在局域网内控制 ZECTRIX Note4，显示 400×300 黑体九宫盘，默�
 
 1. 将本目录放到 NAS 的 `docker/qimen-note4`（本次实际部署目录为 `/volume1/docker/qimen-note4`）。不要放进 Web Station 对外公开的目录；`.env` 和 SQLite 都是服务私有数据。之前的 `home/qimen-note4` 为源文件副本，正式服务使用 docker 目录。
 2. Note4 使用 SDK 配套固件 3.7.2，开启“设置 → 网络同步 → 待机保持 Wi-Fi”，和 NAS 位于同一局域网。地址已预设为 `192.168.110.149`。不适用于 Note4C。
-3. `.env` 已存在时保留它。新安装可把 `.env.example` 复制为 `.env`，填入 MiniMax 密钥。空的 TEXT/ASR/TTS 独立密钥继承 `MINIMAX_API_KEY`；已有服务的密钥可使用 `node tools/configure.mjs /实际路径/qimen_api.php` 导入，命令不会输出密钥。
+3. 每位用户须自行配置 MiniMax API Key。仓库不提供共享密钥，也不包含部署者的 `.env`。新安装先执行 `cp .env.example .env`，编辑 `.env`，把 `MINIMAX_API_KEY=` 填成自己的密钥，并将 `NOTE4_TARGET` 改成自己的 Note4 局域网 IP。空的 TEXT/ASR/TTS 独立密钥继承 `MINIMAX_API_KEY`；若接口使用不同密钥，分别填写对应字段。仅排盘不需要密钥，语音识别、AI 解读和朗读需要相应接口权限。更新安装时保留自己已有的 `.env`。
 4. 在 NAS 此目录中执行：
 
 ```sh
