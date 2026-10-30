@@ -158,6 +158,7 @@ export class Controller {
       this.store.update(id,{stage:result?.end==='Completed'?'完成':'完成（播放已中断）'});
       if(this.isActive(lock)){this.playing=false;this.setStage(lock,'解读已保存，可继续长按追问');}
     }catch(error){
+      console.error('语音解读阶段失败：',JSON.stringify({readingId:id,stage,error:error.message}));
       this.store.update(id,{stage:`${stage}失败`,error:error.message});
       if(this.isActive(lock)){this.playing=false;this.setStage(lock,`${stage}失败：${error.message}`);}
     }

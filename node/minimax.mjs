@@ -33,14 +33,22 @@ export class MiniMax {
     this.asrUrl=env.MINIMAX_ASR_URL||'https://api.minimax.cn/v1/speech_to_text';
     this.ttsUrl=env.MINIMAX_TTS_URL||'https://api.minimax.cn/v1/t2a_v2';
     this.ttsModel=env.MINIMAX_TTS_MODEL||'speech-2.8-turbo';this.voice=env.MINIMAX_VOICE||'male-qn-qingse';
+    const configured=Number(env.MINIMAX_TTS_TIMEOUT_MS||180000);
+    this.ttsTimeout=Number.isFinite(configured)?Math.max(1000,Math.min(300000,configured)):180000;
   }
   async request(url,key,body,multipart=false,timeout=180000) {
     if(!key)throw new Error('未配置此接口的MiniMax密钥');
     let response;
     try {response=await this.fetch(url,{method:'POST',headers:{Authorization:`Bearer ${key}`,...(multipart?{}:{'Content-Type':'application/json'})},
       body:multipart?body:JSON.stringify(body),signal:AbortSignal.timeout(timeout)});}
-    catch {throw new Error('MiniMax请求超时或无法连接');}
-    const data=await response.json().catch(()=>{throw new Error(`MiniMax返回无效JSON（HTTP ${response.status}）`);});
+    catch(error){
+      const code=error?.cause?.code||error?.code||error?.name||'NETWORK_ERROR';
+      throw new Error(`MiniMax请求超时或无法连接（${String(code).replace(/[^A-Za-z0-9_-]/g,'').slice(0,50)}）`);
+    }
+    const data=await response.json().catch(error=>{
+      if(['AbortError','TimeoutError','TypeError'].includes(error?.name))throw new Error('MiniMax请求超时或无法连接（响应体中断）');
+      throw new Error(`MiniMax返回无效JSON（HTTP ${response.status}）`);
+    });
     if(!response.ok || (data.base_resp && data.base_resp.status_code!==0) || data.error) {
       // Do not log request bodies or credentials; preserve the provider's business error.
       const raw=data.error?.message||data.base_resp?.status_msg||`HTTP ${response.status}`;
@@ -93,9 +101,25 @@ export class MiniMax {
     }
   }
   async synthesize(text) {
-    const data=await this.request(this.ttsUrl,this.ttsKey,{model:this.ttsModel,text,stream:false,
+    const speech=excerptSummary(text,300);
+    if(!speech)throw new Error('播报内容为空');
+    let data;
+    for(let attempt=1;attempt<=2;attempt++) {
+      const started=Date.now();
+      console.log('语音合成开始：',JSON.stringify({attempt,characters:Array.from(speech).length,timeoutMs:this.ttsTimeout}));
+      try {
+        data=await this.request(this.ttsUrl,this.ttsKey,{model:this.ttsModel,text:speech,stream:false,
       voice_setting:{voice_id:this.voice,speed:1,vol:1,pitch:0},language_boost:'Chinese',
-      audio_setting:{sample_rate:16000,format:'wav',channel:1}},false,120000);
+      audio_setting:{sample_rate:16000,format:'wav',channel:1}},false,this.ttsTimeout);
+        console.log('语音合成返回：',JSON.stringify({attempt,elapsedMs:Date.now()-started}));
+        break;
+      }catch(error){
+        console.error('语音合成请求失败：',JSON.stringify({attempt,elapsedMs:Date.now()-started,error:error.message}));
+        if(attempt===2||!/请求超时或无法连接|HTTP (?:429|500|502|503|504)/.test(error.message))throw error;
+        console.warn('语音合成临时失败，2秒后重试一次；不会重复解读或播报');
+        await new Promise(resolve=>setTimeout(resolve,2000));
+      }
+    }
     const hex=data.data?.audio;
     if(typeof hex!=='string'||!hex.length||!/^(?:[a-f\d]{2})+$/i.test(hex))throw new Error('语音合成未返回有效音频');
     return normalizeAudio(Buffer.from(hex,'hex'));

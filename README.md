@@ -69,6 +69,8 @@ docker compose up -d
 - `data/records/盘ID/chart.json`：盘面导出；每次解读另存一份 `.md`，包括问题、完整解读、摘要和阶段错误。
 - 原始录音仅在内存中封装 WAV 并发送给 MiniMax，不保存到磁盘。识别模型 `asr-1.0`；文本默认 `MiniMax-M3`；朗读默认 `speech-2.8-turbo` / `male-qn-qingse`，可在 `.env` 修改。
 - 文字保存先于语音合成；语音接口失败时，已经生成的解读不会丢失。三种接口需要各自具备权限，不能仅凭文字接口成功判断全部已开通。
+- 播报设备音量由 `NOTE4_VOLUME` 设置（0–100，示例值 90）。语音合成单次超时由 `MINIMAX_TTS_TIMEOUT_MS` 设置（默认 180000 毫秒），临时网络失败或 HTTP 429/5xx 最多重试一次；权限错误不重试。合成文本限制为 300 字以内，日志仅记录阶段、耗时和字数。
+- 修改 `.env` 中的音量或超时后，执行 `docker compose up -d --force-recreate` 重新创建容器以加载配置。仅执行 `docker compose restart` 不会重新读取 Compose 的 `env_file`。
 
 在 NAS 验证密钥（上传的只是自动生成的测试音频）：
 
